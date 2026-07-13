@@ -149,6 +149,7 @@
   .tree li{ white-space:nowrap }
   .row{ display:inline }
   .twist{ cursor:pointer; user-select:none; -webkit-user-select:none; display:inline-block; width:1.1em; text-align:center; color:var(--muted) }
+  .twist:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; border-radius:3px }
   .leaf .twist{ visibility:hidden }
   .k{ color:var(--hl-attr) }
   .s{ color:var(--hl-string) }
@@ -1652,6 +1653,9 @@ return He}()
       return out;
     }
     if (ext === "yaml" || ext === "yml") return jsyaml.load(text);
+    if (ext === ""){ // pasted or dropped text: no filename — try strict JSON, then lenient JSON5
+      try { return JSON.parse(text); } catch (e){ return JSON5.parse(text); }
+    }
     throw new Error("no parser");
   }
   function parseCsv(text, sep){
@@ -1718,11 +1722,20 @@ return He}()
       var closeLi = el("li"); closeLi.appendChild(close); ul.appendChild(closeLi);
       li.appendChild(ul);
       twist.textContent = "▾";
-      if (len === 0 || depth >= 2){ li.className = "collapsed"; twist.textContent = "▸"; }
-      twist.addEventListener("click", function(){
+      twist.setAttribute("role", "button");
+      twist.setAttribute("tabindex", "0");
+      twist.setAttribute("aria-label", "Toggle " + (key !== null ? key : (isArr ? "array" : "object")));
+      twist.setAttribute("aria-expanded", "true");
+      if (len === 0 || depth >= 2){ li.className = "collapsed"; twist.textContent = "▸"; twist.setAttribute("aria-expanded", "false"); }
+      var toggle = function(){
         var c = li.className.indexOf("collapsed") >= 0;
         li.className = c ? "" : "collapsed";
         twist.textContent = c ? "▾" : "▸";
+        twist.setAttribute("aria-expanded", c ? "true" : "false");
+      };
+      twist.addEventListener("click", toggle);
+      twist.addEventListener("keydown", function(e){
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar"){ e.preventDefault(); toggle(); }
       });
     } else {
       li.className = "leaf";
@@ -1785,10 +1798,19 @@ return He}()
       if (elements.length > shown){ var more = el("li","more"); more.textContent = "… " + (elements.length - shown) + " more"; ul.appendChild(more); }
       li.appendChild(ul);
       twist.textContent = "▾";
-      twist.addEventListener("click", function(){
+      twist.setAttribute("role", "button");
+      twist.setAttribute("tabindex", "0");
+      twist.setAttribute("aria-label", "Toggle " + node.nodeName);
+      twist.setAttribute("aria-expanded", "true");
+      var xtoggle = function(){
         var c = li.className.indexOf("collapsed") >= 0;
         li.className = c ? "" : "collapsed";
         twist.textContent = c ? "▾" : "▸";
+        twist.setAttribute("aria-expanded", c ? "true" : "false");
+      };
+      twist.addEventListener("click", xtoggle);
+      twist.addEventListener("keydown", function(e){
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar"){ e.preventDefault(); xtoggle(); }
       });
     } else {
       li.className = "leaf";
