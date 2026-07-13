@@ -127,7 +127,10 @@
 
   /* ---------- Header while viewing: fixed, hides on scroll-down ---------- */
   .hover-zone{display:none}
-  body.viewing .hover-zone{display:block; position:fixed; top:0; left:0; right:0; height:24px; z-index:35}
+  body.viewing .hover-zone{display:block; position:fixed; top:0; left:0; right:0; height:22px; z-index:35; cursor:pointer}
+  /* when the header is collapsed it shrinks to this thick, tappable line sitting over the content */
+  body.viewing.hdr-hidden .hover-zone::before{content:""; position:absolute; top:0; left:0; right:0; height:7px; background:var(--accent); box-shadow:0 1px 6px var(--shadow)}
+  body.viewing.hdr-hidden .hover-zone::after{content:""; position:absolute; top:1.5px; left:50%; transform:translateX(-50%); width:46px; height:4px; border-radius:2px; background:var(--accent-contrast); opacity:.7}
   body.viewing .topbar{
     position:fixed; top:0; left:0; right:0; z-index:36;
     box-shadow:0 6px 22px var(--shadow);
@@ -306,7 +309,7 @@
     <div class="empty-inner">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
       <p class="empty-title">Drop a data file to explore</p>
-      <p class="empty-sub">Drag &amp; drop anywhere, paste, or tap to open. JSON, YAML, CSV, TSV &amp; XML render as a tree or table; every file has a highlighted source view.</p>
+      <p class="empty-sub">Drag &amp; drop anywhere, paste, or tap to open. Accepts .json, .jsonc, .json5, .ndjson, .yaml, .csv, .tsv, .xml, .toml &amp; more.</p>
     </div>
   </section>
   <div id="dataView" class="dataview" hidden></div>
@@ -1973,7 +1976,7 @@ return He}()
       dataView.hidden = true; codeView.hidden = false;
       codeView.scrollTop = 0; codeView.scrollLeft = 0;
     }
-    showHeader();
+    if (mode === "rendered") revealHeader(); else { showHeader(); clearTimeout(hdrIdleTimer); }
     updateViewBtn(); updateFormatBtn();
   }
   function updateViewBtn(){
@@ -2030,24 +2033,28 @@ return He}()
   empty.addEventListener("click", openDialog);
   empty.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === " "){ e.preventDefault(); openDialog(); } });
 
-  // ---------- Header: hide on scroll-down; show on scroll-up or after 5s idle ----------
-  var HDR_IDLE_MS = 5000, HDR_THRESH = 6, hdrIdleTimer = null;
+  // ---------- Header: rendered views auto-hide after 3s (collapse to a handle); ----------
+  // ---------- hover / touch / scroll-up brings it back. Source view keeps it. ------------
+  var HDR_IDLE_MS = 3000, HDR_THRESH = 6, hdrIdleTimer = null;
   var lastPos = { win:0, code:0, data:0 };
   function showHeader(){ body.classList.remove("hdr-hidden"); }
-  function hideHeader(){ if (body.classList.contains("viewing")) body.classList.add("hdr-hidden"); }
-  function armIdleReveal(){ clearTimeout(hdrIdleTimer); hdrIdleTimer = setTimeout(showHeader, HDR_IDLE_MS); }
+  function hideHeader(){ if (body.classList.contains("viewing") && mode === "rendered") body.classList.add("hdr-hidden"); }
+  function armIdleHide(){ clearTimeout(hdrIdleTimer); hdrIdleTimer = setTimeout(hideHeader, HDR_IDLE_MS); }
+  function revealHeader(){ showHeader(); armIdleHide(); }
   function onScroll(k, pos){
     if (!body.classList.contains("viewing")) return;
     var d = pos - lastPos[k]; lastPos[k] = pos;
-    if (d > HDR_THRESH){ hideHeader(); armIdleReveal(); }
-    else if (d < -HDR_THRESH){ showHeader(); clearTimeout(hdrIdleTimer); }
-    else { armIdleReveal(); }
+    if (d > HDR_THRESH){ hideHeader(); }
+    else if (d < -HDR_THRESH){ revealHeader(); }
   }
   window.addEventListener("scroll", function(){ onScroll("win", window.pageYOffset || root.scrollTop || 0); }, { passive:true });
   codeView.addEventListener("scroll", function(){ onScroll("code", codeView.scrollTop); }, { passive:true });
   dataView.addEventListener("scroll", function(){ onScroll("data", dataView.scrollTop); }, { passive:true });
-  hoverZone.addEventListener("mouseenter", showHeader);
-  hoverZone.addEventListener("click", showHeader);
+  hoverZone.addEventListener("mouseenter", revealHeader);
+  hoverZone.addEventListener("click", revealHeader);
+  hoverZone.addEventListener("touchstart", function(){ revealHeader(); }, { passive:true });
+  topbar.addEventListener("mouseenter", function(){ showHeader(); clearTimeout(hdrIdleTimer); });
+  topbar.addEventListener("mouseleave", function(){ armIdleHide(); });
   function measureHeader(){ root.style.setProperty("--hdr-h", (topbar ? topbar.offsetHeight : 56) + "px"); }
   measureHeader(); window.addEventListener("resize", measureHeader);
   id("btnHideFooter").addEventListener("click", function(){ if (footerEl) footerEl.hidden = true; });
