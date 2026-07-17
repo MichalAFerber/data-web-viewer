@@ -91,6 +91,7 @@ strict (`default-src 'none'`, no external assets).
 | [highlight.js](https://github.com/highlightjs/highlight.js) | 11.9.0 | BSD-3-Clause |
 | [js-yaml](https://github.com/nodeca/js-yaml) | 4.1.0 | MIT |
 | [JSON5](https://github.com/json5/json5) | 2.2.3 | MIT |
+| [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) | 2.305 (subset) | SIL OFL-1.1 |
 
 The file-type icon (favicon and header icon) is from
 [vscode-icons](https://github.com/vscode-icons/vscode-icons) (MIT). Analytics by
